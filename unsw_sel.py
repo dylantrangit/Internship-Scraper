@@ -35,6 +35,8 @@ for link in links_to_visit:
     unsw_URL = link
     company = driver.find_element(By.XPATH, "//ul[@class='breadcrumbs']/li[3]/a/span").text
     location = driver.find_element(By.XPATH, '//*[@id="__next"]/div[2]/div[3]/div/div/div[2]/div/div/section/div[1]/section/div[1]/div/p').text
-    print(location)
+    deadline = driver.find_element(By.XPATH, "//span[starts-with(text(), 'Apply by')]").text
+
+    print(deadline)
 
 driver.quit()
