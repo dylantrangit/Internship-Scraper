@@ -5,8 +5,10 @@ import time
 
 
 def unswScraper(driver, URL, connection):
+    print("UNSW scraper started")
     cur = connection.cursor()
     driver.get(URL)
+    print(driver.page_source[:500])  
     print(driver.title)
     time.sleep(5)
 
