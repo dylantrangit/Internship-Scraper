@@ -1,12 +1,16 @@
-#from concurrent.futures import ThreadPoolExecutor
 from gc_sel import gradConnectScraper, gradConnectLogIn
 from unsw_sel import unswScraper
 from selenium import webdriver
 import undetected_chromedriver as uc
 import psycopg2
 
-#def scrape_website(scraper_func, driver, db_connection, url):
-    #scraper_func(driver, url, db_connection)
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import current_thread
+
+
+
+def scrape_website(scraper_func, driver, url, connection):
+    scraper_func(driver, url, connection )
 
 connection = psycopg2.connect(
     dbname="postgres",
@@ -27,30 +31,32 @@ options = uc.ChromeOptions()
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument("--disable-dev-shm-usage")
-#options.add_argument("--headless")
-
 
 
 driver_UNSW = uc.Chrome(options=options)
 
+scrapers = [
+    (gradConnectScraper, driver_GC, URL_GC, connection),
+    (unswScraper, driver_UNSW, URL_UNSW, connection),
+]
 
 gradConnectLogIn(driver_GC, URL_LOGIN_GC, USERNAME, PASSWORD)
 
 
-scrapers = [
-    (gradConnectScraper, driver_GC, URL_GC),
-    (unswScraper, driver_UNSW, URL_UNSW)
-]
+with ThreadPoolExecutor(max_workers=2) as executor:
+    futures = [
+        executor.submit(scrape_website, scraper_func, driver, url, db_connection)
+        for scraper_func, driver, url, db_connection in scrapers
+    ]
+    for future in as_completed(futures):
+        try:
+            future.result()
+        except Exception as e:
+            print(f"Scraper raised an error: {e}")
 
-# with ThreadPoolExecutor(max_workers=len(scrapers)) as executor:
-#     for scraper_func, driver, url in scrapers:
-#         executor.submit(scrape_website, scraper_func, driver, connection, url)
-# with ThreadPoolExecutor(max_workers=1) as executor:
-#     executor.submit(scrape_website, gradConnectScraper, driver_GC, connection, URL_GC)
+driver_GC.quit()
+driver_UNSW.quit()
+connection.close()
 
-# with ThreadPoolExecutor(max_workers=1) as executor:
-#     executor.submit(scrape_website, unswScraper, driver_UNSW, connection, URL_UNSW)
 
-gradConnectScraper(driver_GC, URL_GC, connection)
-print("Launching UNSW scraper...")
-unswScraper(driver_UNSW, URL_UNSW, connection)
+
